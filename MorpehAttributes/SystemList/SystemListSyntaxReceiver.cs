@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -5,7 +7,7 @@ namespace MorpehAttributes.SystemList;
 
 internal class SystemListSyntaxReceiver : ISyntaxContextReceiver
 {
-    public SystemInfo[] SystemInfos { get; private set; }
+    public readonly Dictionary<ISymbol, AttributeSyntax[]> Test = new();
 
     public void OnVisitSyntaxNode(GeneratorSyntaxContext context)
     {
@@ -13,18 +15,16 @@ internal class SystemListSyntaxReceiver : ISyntaxContextReceiver
         {
             return;
         }
-
-        SystemInfos = classDeclarationSyntax.AttributeLists
+        
+        var attributes = classDeclarationSyntax.AttributeLists
             .SelectMany(l => l.Attributes)
-            .Where(e => e.Name.NormalizeWhitespace().ToFullString() == nameof(SystemListAttribute))
-            .Select(attributeSyntax =>
-            {
-                var expressionSyntax = attributeSyntax.ArgumentList?.Arguments[0].Expression;
-                var argumentValue =
-                    (SystemInfo[]) context.SemanticModel.GetOperation(expressionSyntax)?.ConstantValue.Value!;
+            .Where(e => e.Name.ToString() == "ECSSystem")
+            .ToArray();
 
-                return argumentValue;
-            })
-            .FirstOrDefault();
+        var symbol = context.SemanticModel.GetDeclaredSymbol(classDeclarationSyntax);
+        if (attributes.Length > 0 && symbol != null)
+        {
+            Test.Add(symbol, attributes);
+        }
     }
 }
