@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using MorpehAttributes.Shared.SystemList;
 
 namespace MorpehAttributes.SystemList;
 
@@ -17,8 +18,8 @@ internal class SystemListSyntaxReceiver : ISyntaxContextReceiver
         }
         
         var attributes = classDeclarationSyntax.AttributeLists
-            .SelectMany(l => l.Attributes)
-            .Where(e => e.Name.ToString() == "ECSSystem")
+            .SelectMany(list => list.Attributes)
+            .Where(attributeSyntax => attributeSyntax.Name.ToString() == nameof(SystemListAttribute))
             .ToArray();
 
         var symbol = context.SemanticModel.GetDeclaredSymbol(classDeclarationSyntax);

@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MorpehAttributes", "MorpehAttributes\MorpehAttributes.csproj", "{1E4D434D-D617-480D-9AAB-B92F74CB0F9B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MorpehAttributes.Shared", "MorpehAttributes.Shared\MorpehAttributes.Shared.csproj", "{A493B619-BC49-4CBC-A868-F55C88D0C8A3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{1E4D434D-D617-480D-9AAB-B92F74CB0F9B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1E4D434D-D617-480D-9AAB-B92F74CB0F9B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1E4D434D-D617-480D-9AAB-B92F74CB0F9B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A493B619-BC49-4CBC-A868-F55C88D0C8A3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A493B619-BC49-4CBC-A868-F55C88D0C8A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A493B619-BC49-4CBC-A868-F55C88D0C8A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A493B619-BC49-4CBC-A868-F55C88D0C8A3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

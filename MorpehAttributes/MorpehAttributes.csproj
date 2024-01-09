@@ -13,4 +13,8 @@
       <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.8.0" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\MorpehAttributes.Shared\MorpehAttributes.Shared.csproj" />
+    </ItemGroup>
+
 </Project>

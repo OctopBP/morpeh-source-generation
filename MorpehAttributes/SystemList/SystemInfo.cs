@@ -1,22 +1,19 @@
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using MorpehAttributes.Common;
+using MorpehAttributes.Shared.SystemList;
 
 namespace MorpehAttributes.SystemList;
 
 class SystemInfo
 {
     public readonly TypeSyntax TypeSyntax;
-    public readonly string Name;
-    public readonly string UpdatePhase;
-    public readonly string Type;
+    public readonly SystemListAttribute SystemListAttribute;
     public readonly string VarName;
     
-    public SystemInfo(TypeSyntax typeSyntax, string updatePhase, string type)
+    public SystemInfo(TypeSyntax typeSyntax, SystemListAttribute systemListAttribute)
     {
         TypeSyntax = typeSyntax;
-        Name = typeSyntax.GetText().ToString();
-        UpdatePhase = updatePhase;
-        Type = type;
-        VarName = Name.LowerFirstLatter().WithUnderscore();
+        SystemListAttribute = systemListAttribute;
+        VarName = systemListAttribute.SystemType.Name.LowerFirstLatter().WithUnderscore();
     }
 }
