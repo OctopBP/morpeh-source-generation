@@ -1,14 +1,12 @@
-using System;
 using Microsoft.CodeAnalysis;
 
 namespace Morpeh.SourceGeneration.SystemGenerator;
 
-[Flags]
 internal enum SystemType
 {
-    None = 0,
-    Initialize = 1,
-    Update = 2,
+    None,
+    Initialize,
+    Update,
 }
 
 internal record struct SystemToGenerate(

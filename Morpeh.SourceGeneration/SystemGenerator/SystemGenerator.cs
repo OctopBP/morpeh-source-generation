@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Morpeh.SourceGeneration.Common;
+using Morpeh.SourceGeneration.SystemGenerator.Filter;
 
 namespace Morpeh.SourceGeneration.SystemGenerator;
 
@@ -47,7 +48,8 @@ public sealed class SystemGenerator : IIncrementalGenerator
         {
             return null;
         }
-
+        
+        // TODO: maybe better to use classDeclarationTypeSymbol.AllInterfaces
         var systemType = ResolveSystemType(classDeclarationSyntax);
 
         if (systemType == SystemType.None)
@@ -55,39 +57,121 @@ public sealed class SystemGenerator : IIncrementalGenerator
             return null;
         }
 
-        // var enumNamespace = enumDeclarationTypeSymbol.GetNamespace();
+        // TODO:
+        // var classNamespace = classDeclarationTypeSymbol.GetNamespace();
 
         var stashes = new List<StashToGenerate>();
         var filters = new List<FilterToGenerate>();
-        foreach (var memberTypeSymbol in classDeclarationTypeSymbol.GetTypeMembers())
+        foreach (var memberDeclaration in classDeclarationSyntax.Members)
         {
-            if (memberTypeSymbol.IsGenericType)
+            if (memberDeclaration is not FieldDeclarationSyntax fieldDeclaration)
             {
-                stashes.Add(new StashToGenerate(memberTypeSymbol, "_name"));
-            } else if (memberTypeSymbol.Name == "Filter")
+                continue;
+            }
+
+            var fieldType = fieldDeclaration.Declaration.Type;
+            if (fieldType is GenericNameSyntax genericNameSyntax)
             {
-                filters.Add(new FilterToGenerate(memberTypeSymbol.Name, [], []));
+                if (genericNameSyntax.GetNameText() == "Stash")
+                {
+                    var arguments = genericNameSyntax.TypeArgumentList.Arguments;
+                    if (arguments.Count != 1)
+                    {
+                        continue;
+                    }
+                    
+                    var firstArgument = arguments[0];
+                    var argumentSymbol = ctx.SemanticModel.GetSymbolInfo(firstArgument).Symbol;
+                    if (argumentSymbol is null)
+                    {
+                        continue;
+                    }
+                    
+                    foreach (var variable in fieldDeclaration.Declaration.Variables)
+                    {
+                        stashes.Add(new StashToGenerate(argumentSymbol, variable.Identifier.ToString()));
+                    }
+                
+                }
+            }
+            else if (fieldDeclaration.Declaration.Type.ToString() == "Filter")
+            {
+                var withTypes = new List<ISymbol>();
+                var withoutTypes = new List<ISymbol>();
+                foreach (var filterAttributes in fieldDeclaration.AttributeLists)
+                {
+                    foreach (var filterAttribute in filterAttributes.Attributes)
+                    {
+                        if (filterAttribute.Name.AttributeIsEqualByName(WithAttribute.AttributeName))
+                        {
+                            var symbols = ExtractTypeofType(ctx, filterAttribute);
+                            withTypes.AddRange(symbols);
+                        }
+                        else if (filterAttribute.Name.AttributeIsEqualByName(WithoutAttribute.AttributeName))
+                        {
+                            var symbols = ExtractTypeofType(ctx, filterAttribute);
+                            withoutTypes.AddRange(symbols);
+                        }
+                    }
+                }
+
+                foreach (var variable in fieldDeclaration.Declaration.Variables)
+                {
+                    filters.Add(new FilterToGenerate(
+                        variable.Identifier.ToString(), withTypes.ToArray(), withoutTypes.ToArray()));
+                }
             }
         }
 
         return new SystemToGenerate(classDeclarationTypeSymbol, systemType, stashes.ToArray(), filters.ToArray());
     }
 
+    private static List<ISymbol> ExtractTypeofType(GeneratorSyntaxContext ctx, AttributeSyntax filterAttribute)
+    {
+        if (filterAttribute.ArgumentList is null)
+        {
+            return [];
+        }
+
+        var arguments = filterAttribute.ArgumentList.Arguments;
+        if (arguments.Count == 0)
+        {
+            return [];
+        }
+
+        var list = new List<ISymbol>();
+        foreach (var attributeArgumentSyntax in arguments)
+        {
+            if (attributeArgumentSyntax.Expression is not TypeOfExpressionSyntax typeOfExpressionSyntax)
+            {
+                continue;
+            }
+                            
+            var typeSymbol = ctx.SemanticModel.GetSymbolInfo(typeOfExpressionSyntax.Type).Symbol;
+            if (typeSymbol is null)
+            {
+                continue;
+            }
+            
+            list.Add(typeSymbol);
+        }
+        
+        return list;
+    }
+
     private static SystemType ResolveSystemType(ClassDeclarationSyntax classDeclarationSyntax)
     {
-        var systemType = SystemType.None;
-        
         if (classDeclarationSyntax.HaveInterface(SystemInterfaces.InitializeInterfaceName))
         {
-            systemType |= SystemType.Initialize;
+            return SystemType.Initialize;
         }
         
         if (classDeclarationSyntax.HaveInterface(SystemInterfaces.UpdateInterfaceName))
         {
-            systemType |= SystemType.Update;
+            return SystemType.Update;
         }
 
-        return systemType;
+        return SystemType.None;
     }
 
     private static void GenerateCode(SourceProductionContext context, SystemToGenerate systemToGenerate)
@@ -99,7 +183,7 @@ public sealed class SystemGenerator : IIncrementalGenerator
     private static string GenerateCode(SystemToGenerate systemToGenerate)
     {
         var builder = new CodeBuilder();
-
+        
         builder.AppendIdent().Append("public partial class ").Append(systemToGenerate.TypeSymbol.Name);
         switch (systemToGenerate.SystemType)
         {
@@ -113,6 +197,7 @@ public sealed class SystemGenerator : IIncrementalGenerator
         builder.OpenBrackets();
 
         AppendInitialize();
+        builder.AppendLine();
         AppendDispose();
         
         builder.CloseBrackets();
@@ -130,7 +215,8 @@ public sealed class SystemGenerator : IIncrementalGenerator
                 builder.AppendIdent().Append(stash.Name).Append(" = _world.GetStash<")
                     .Append(stash.Type.ToDisplayString()).Append(">();").AppendLine();
             }
-            
+
+            builder.AppendLine();
             builder.AppendLineWithIdent("// Filters");
             
             foreach (var filter in systemToGenerate.Filters)

@@ -5,7 +5,7 @@ namespace Morpeh.SourceGeneration.SystemGenerator.Filter;
 public static class WithAttribute
 {
     public const string AttributeName = "With";
-    public static readonly string AttributeFullName = AttributeName.AddAttributePostfix();
+    public static readonly string AttributeFullName = AttributeName.WithAttributePostfix();
 
     public static readonly string AttributeText =
         $$"""

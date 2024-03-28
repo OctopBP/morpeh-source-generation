@@ -38,5 +38,5 @@ public static class StringExtensions
         };
     }
     
-    public static string AddAttributePostfix(this string value) => value + "Attribute";
+    public static string WithAttributePostfix(this string value) => value + "Attribute";
 }
