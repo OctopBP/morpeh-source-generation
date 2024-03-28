@@ -57,9 +57,6 @@ public sealed class SystemGenerator : IIncrementalGenerator
             return null;
         }
 
-        // TODO:
-        // var classNamespace = classDeclarationTypeSymbol.GetNamespace();
-
         var stashes = new List<StashToGenerate>();
         var filters = new List<FilterToGenerate>();
         foreach (var memberDeclaration in classDeclarationSyntax.Members)
@@ -122,11 +119,11 @@ public sealed class SystemGenerator : IIncrementalGenerator
                 }
             }
         }
-
+        
         return new SystemToGenerate(classDeclarationTypeSymbol, systemType, stashes.ToArray(), filters.ToArray());
     }
 
-    private static List<ISymbol> ExtractTypeofType(GeneratorSyntaxContext ctx, AttributeSyntax filterAttribute)
+    private static IEnumerable<ISymbol> ExtractTypeofType(GeneratorSyntaxContext ctx, AttributeSyntax filterAttribute)
     {
         if (filterAttribute.ArgumentList is null)
         {
@@ -183,70 +180,78 @@ public sealed class SystemGenerator : IIncrementalGenerator
     private static string GenerateCode(SystemToGenerate systemToGenerate)
     {
         var builder = new CodeBuilder();
-        
-        builder.AppendIdent().Append("public partial class ").Append(systemToGenerate.TypeSymbol.Name);
-        switch (systemToGenerate.SystemType)
+
+        builder.AppendLineWithIdent("using Scellecs.Morpeh;");
+        builder.AppendLine();
+
+        using (new CodeBuilder.NamespaceBlock(builder, systemToGenerate.TypeSymbol))
         {
-            case SystemType.None: break;
-            case SystemType.Initialize: builder.Append(" : IAsyncStartable"); break;
-            case SystemType.Update: builder.Append(" : IAsyncStartable, ITickable"); break;
-            default: throw new ArgumentOutOfRangeException();
+            builder.AppendIdent().Append("public partial class ").Append(systemToGenerate.TypeSymbol.Name);
+
+            var interfaces = systemToGenerate.SystemType switch {
+                SystemType.None => "",
+                SystemType.Initialize => " : VContainer.Unity.IAsyncStartable",
+                SystemType.Update => " : VContainer.Unity.IAsyncStartable, VContainer.Unity.ITickable",
+                _ => throw new ArgumentOutOfRangeException(),
+            };
+            builder
+                .Append(interfaces)
+                .AppendLine();
+
+            using (new CodeBuilder.BracketsBlock(builder))
+            {
+                AppendInitialize();
+                builder.AppendLine();
+                AppendDispose();
+            }
         }
-        builder.AppendLine();
-
-        builder.OpenBrackets();
-
-        AppendInitialize();
-        builder.AppendLine();
-        AppendDispose();
         
-        builder.CloseBrackets();
-
         return builder.ToString();
 
         void AppendInitialize()
         {
             builder.AppendLineWithIdent("public void Initialize()");
-            builder.OpenBrackets();
-            builder.AppendLineWithIdent("// Stashes");
-            
-            foreach (var stash in systemToGenerate.Stashes)
+            using (new CodeBuilder.BracketsBlock(builder))
             {
-                builder.AppendIdent().Append(stash.Name).Append(" = _world.GetStash<")
-                    .Append(stash.Type.ToDisplayString()).Append(">();").AppendLine();
-            }
+                builder.AppendLineWithIdent("// Stashes");
 
-            builder.AppendLine();
-            builder.AppendLineWithIdent("// Filters");
-            
-            foreach (var filter in systemToGenerate.Filters)
-            {
-                builder.AppendIdent().Append(filter.Name).Append(" = _world.Filter");
-                foreach (var with in filter.With)
+                foreach (var stash in systemToGenerate.Stashes)
                 {
-                    builder.Append(".With<").Append(with.Name).Append(">()");
+                    builder.AppendIdent().Append(stash.Name).Append(" = _world.GetStash<")
+                        .Append(stash.Type.ToDisplayString()).Append(">();").AppendLine();
                 }
-                foreach (var without in filter.Without)
+
+                builder.AppendLine();
+                builder.AppendLineWithIdent("// Filters");
+
+                foreach (var filter in systemToGenerate.Filters)
                 {
-                    builder.Append(".Without<").Append(without.Name).Append(">()");
+                    builder.AppendIdent().Append(filter.Name).Append(" = _world.Filter");
+                    foreach (var with in filter.With)
+                    {
+                        builder.Append(".With<").Append(with.ToDisplayString()).Append(">()");
+                    }
+
+                    foreach (var without in filter.Without)
+                    {
+                        builder.Append(".Without<").Append(without.ToDisplayString()).Append(">()");
+                    }
+
+                    builder.Append(".Build();").AppendLine();
                 }
-                builder.Append(".Build();").AppendLine();
             }
-            
-            builder.CloseBrackets();
         }
 
         void AppendDispose()
         {
             builder.AppendLineWithIdent("public void Dispose()");
-            builder.OpenBrackets();
-            
-            foreach (var filter in systemToGenerate.Filters)
+            using (new CodeBuilder.BracketsBlock(builder))
             {
-                builder.AppendIdent().Append(filter.Name).Append(" = null").AppendLine();
+                foreach (var filter in systemToGenerate.Filters)
+                {
+                    builder.AppendIdent().Append(filter.Name).Append(" = null;").AppendLine();
+                }
             }
-            
-            builder.CloseBrackets();
         }
     }
 }
