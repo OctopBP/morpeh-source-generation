@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Morpeh.SourceGeneration.Common;
@@ -80,6 +81,19 @@ public static class DeclarationSyntaxExtensions
         }
 
         argumentList = default;
+        return false;
+    }
+
+    public static bool HaveInterface(this ITypeSymbol typeSymbol, string interfaceName)
+    {
+        foreach (var typeInterface in typeSymbol.Interfaces)
+        {
+            if (typeInterface.ToDisplayString() == interfaceName)
+            {
+                return true;
+            }
+        }
+
         return false;
     }
     

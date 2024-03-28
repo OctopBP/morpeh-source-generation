@@ -26,8 +26,8 @@ public sealed class SystemGenerator : IIncrementalGenerator
 
         context.RegisterPostInitializationOutput(i =>
         {
-            i.AddSource($"{Filter.WithAttribute.AttributeFullName}.g", Filter.WithAttribute.AttributeText);
-            i.AddSource($"{Filter.WithoutAttribute.AttributeFullName}.g", Filter.WithoutAttribute.AttributeText);
+            i.AddSource($"{WithAttribute.AttributeFullName}.g", WithAttribute.AttributeText);
+            i.AddSource($"{WithoutAttribute.AttributeFullName}.g", WithoutAttribute.AttributeText);
             i.AddSource("Interfaces.g", SystemInterfaces.InterfacesText);
         });
         
@@ -49,9 +49,7 @@ public sealed class SystemGenerator : IIncrementalGenerator
             return null;
         }
         
-        // TODO: maybe better to use classDeclarationTypeSymbol.AllInterfaces
-        var systemType = ResolveSystemType(classDeclarationSyntax);
-
+        var systemType = SystemTypeExt.ResolveSystemType(classDeclarationTypeSymbol);
         if (systemType == SystemType.None)
         {
             return null;
@@ -88,7 +86,6 @@ public sealed class SystemGenerator : IIncrementalGenerator
                     {
                         stashes.Add(new StashToGenerate(argumentSymbol, variable.Identifier.ToString()));
                     }
-                
                 }
             }
             else if (fieldDeclaration.Declaration.Type.ToString() == "Filter")
@@ -156,21 +153,6 @@ public sealed class SystemGenerator : IIncrementalGenerator
         return list;
     }
 
-    private static SystemType ResolveSystemType(ClassDeclarationSyntax classDeclarationSyntax)
-    {
-        if (classDeclarationSyntax.HaveInterface(SystemInterfaces.InitializeInterfaceName))
-        {
-            return SystemType.Initialize;
-        }
-        
-        if (classDeclarationSyntax.HaveInterface(SystemInterfaces.UpdateInterfaceName))
-        {
-            return SystemType.Update;
-        }
-
-        return SystemType.None;
-    }
-
     private static void GenerateCode(SourceProductionContext context, SystemToGenerate systemToGenerate)
     {
         var code = GenerateCode(systemToGenerate);
@@ -194,9 +176,7 @@ public sealed class SystemGenerator : IIncrementalGenerator
                 SystemType.Update => " : VContainer.Unity.IAsyncStartable, VContainer.Unity.ITickable",
                 _ => throw new ArgumentOutOfRangeException(),
             };
-            builder
-                .Append(interfaces)
-                .AppendLine();
+            builder.Append(interfaces).AppendLine();
 
             using (new CodeBuilder.BracketsBlock(builder))
             {

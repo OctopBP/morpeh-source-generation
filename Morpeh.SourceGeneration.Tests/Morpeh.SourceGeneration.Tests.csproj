@@ -44,6 +44,8 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Folder Include="FeatureGenerator\Tests\" />
+      <Folder Include="FeatureRunnerGenerator\Tests\" />
       <Folder Include="SystemGenerator\Tests\" />
     </ItemGroup>
 
