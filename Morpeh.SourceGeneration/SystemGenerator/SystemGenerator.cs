@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using Microsoft.CodeAnalysis;
@@ -21,8 +22,7 @@ public sealed class SystemGenerator : IIncrementalGenerator
                 predicate: static (node, _) => IsSyntaxTargetForGeneration(node),
                 transform: static (syntaxContext, token) => GetSemanticTargetForGeneration(syntaxContext, token))
             .Collect()
-            .Select((array, _) => array.OfType<SystemToGenerate>().ToImmutableArray())
-            .SelectMany(static (array, _) => array);
+            .SelectMany(static (array, _) => array.Collect());
 
         context.RegisterPostInitializationOutput(i =>
         {
@@ -39,20 +39,20 @@ public sealed class SystemGenerator : IIncrementalGenerator
         return node is ClassDeclarationSyntax;
     }
     
-    private static SystemToGenerate? GetSemanticTargetForGeneration(GeneratorSyntaxContext ctx, CancellationToken token)
+    private static Optional<SystemToGenerate> GetSemanticTargetForGeneration(GeneratorSyntaxContext ctx, CancellationToken token)
     {
         var classDeclarationSyntax = (ClassDeclarationSyntax) ctx.Node;
 
         var classDeclarationSymbol = ctx.SemanticModel.GetDeclaredSymbol(classDeclarationSyntax, token);
         if (classDeclarationSymbol is not ITypeSymbol classDeclarationTypeSymbol)
         {
-            return null;
+            return OptionalExt.None<SystemToGenerate>();
         }
         
         var systemType = SystemTypeExt.ResolveSystemType(classDeclarationTypeSymbol);
-        if (systemType == SystemType.None)
+        if (!systemType.HasValue)
         {
-            return null;
+            return OptionalExt.None<SystemToGenerate>();
         }
 
         var stashes = new List<StashToGenerate>();
@@ -117,7 +117,7 @@ public sealed class SystemGenerator : IIncrementalGenerator
             }
         }
         
-        return new SystemToGenerate(classDeclarationTypeSymbol, systemType, stashes.ToArray(), filters.ToArray());
+        return new SystemToGenerate(classDeclarationTypeSymbol, systemType.Value, stashes.ToArray(), filters.ToArray());
     }
 
     private static IEnumerable<ISymbol> ExtractTypeofType(GeneratorSyntaxContext ctx, AttributeSyntax filterAttribute)
@@ -170,16 +170,19 @@ public sealed class SystemGenerator : IIncrementalGenerator
         {
             builder.AppendIdent().Append("public partial class ").Append(systemToGenerate.TypeSymbol.Name);
 
-            var interfaces = systemToGenerate.SystemType switch {
-                SystemType.None => "",
-                SystemType.Initialize => " : VContainer.Unity.IAsyncStartable",
-                SystemType.Update => " : VContainer.Unity.IAsyncStartable, VContainer.Unity.ITickable",
-                _ => throw new ArgumentOutOfRangeException(),
+            var interfaces2 = systemToGenerate.SystemType switch {
+                SystemType.Initialize => " : VContainer.Unity.IStartable",
+                SystemType.AsyncInitialize => " : VContainer.Unity.IAsyncStartable",
+                SystemType.Update => " : VContainer.Unity.IStartable, VContainer.Unity.ITickable",
+                SystemType.UpdateWithAsyncInitialize => " : VContainer.Unity.IAsyncStartable, VContainer.Unity.ITickable",
+                _ => throw new ArgumentOutOfRangeException()
             };
-            builder.Append(interfaces).AppendLine();
+            
+            builder.Append(interfaces2).AppendLine();
 
             using (new CodeBuilder.BracketsBlock(builder))
             {
+                AppendWorld();
                 AppendInitialize();
                 builder.AppendLine();
                 AppendDispose();
@@ -188,16 +191,32 @@ public sealed class SystemGenerator : IIncrementalGenerator
         
         return builder.ToString();
 
+        void AppendWorld()
+        {
+            if (systemToGenerate.Filters.Length == 0 && systemToGenerate.Stashes.Length == 0)
+            {
+                return;
+            }
+
+            // builder.AppendLineWithIdent("private Scellecs.Morpeh.World _world;");
+            // builder.AppendLine();
+        }
+        
         void AppendInitialize()
         {
-            builder.AppendLineWithIdent("public void Initialize()");
+            builder.AppendLineWithIdent("public void Initialize(Scellecs.Morpeh.World world)");
             using (new CodeBuilder.BracketsBlock(builder))
             {
+                // if (systemToGenerate.Filters.Length != 0 || systemToGenerate.Stashes.Length != 0)
+                // {
+                //     builder.AppendLineWithIdent("_world = world");
+                // }
+
                 builder.AppendLineWithIdent("// Stashes");
 
                 foreach (var stash in systemToGenerate.Stashes)
                 {
-                    builder.AppendIdent().Append(stash.Name).Append(" = _world.GetStash<")
+                    builder.AppendIdent().Append(stash.Name).Append(" = world.GetStash<")
                         .Append(stash.Type.ToDisplayString()).Append(">();").AppendLine();
                 }
 
@@ -206,7 +225,7 @@ public sealed class SystemGenerator : IIncrementalGenerator
 
                 foreach (var filter in systemToGenerate.Filters)
                 {
-                    builder.AppendIdent().Append(filter.Name).Append(" = _world.Filter");
+                    builder.AppendIdent().Append(filter.Name).Append(" = world.Filter");
                     foreach (var with in filter.With)
                     {
                         builder.Append(".With<").Append(with.ToDisplayString()).Append(">()");

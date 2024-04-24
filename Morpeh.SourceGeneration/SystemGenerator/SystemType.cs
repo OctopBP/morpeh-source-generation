@@ -1,29 +1,39 @@
+using System;
 using Microsoft.CodeAnalysis;
 using Morpeh.SourceGeneration.Common;
 
 namespace Morpeh.SourceGeneration.SystemGenerator;
 
+[Flags]
 public enum SystemType
 {
-    None,
-    Initialize,
-    Update,
+    Initialize = 0,
+    AsyncInitialize = 1,
+    Update = 2,
+    UpdateWithAsyncInitialize = AsyncInitialize | Update,
 }
 
 public static class SystemTypeExt
 {
-    public static SystemType ResolveSystemType(ITypeSymbol typeSymbol)
+    public static Optional<SystemType> ResolveSystemType(ITypeSymbol typeSymbol)
     {
+        if (typeSymbol.HaveInterface(SystemInterfaces.UpdateInterfaceName))
+        {
+            return typeSymbol.HaveInterface(SystemInterfaces.AsyncInitializeInterfaceName)
+                ? SystemType.UpdateWithAsyncInitialize
+                : SystemType.Update;
+        }
+     
         if (typeSymbol.HaveInterface(SystemInterfaces.InitializeInterfaceName))
         {
             return SystemType.Initialize;
         }
         
-        if (typeSymbol.HaveInterface(SystemInterfaces.UpdateInterfaceName))
+        if (typeSymbol.HaveInterface(SystemInterfaces.AsyncInitializeInterfaceName))
         {
-            return SystemType.Update;
+            return SystemType.AsyncInitialize;
         }
 
-        return SystemType.None;
+        return OptionalExt.None<SystemType>();
     }
 }

@@ -15,10 +15,10 @@ namespace Features.FeatureRunner
             _secondFeature.Inject(objectResolver);
         }
 
-        public void Initialize()
+        public void Initialize(Scellecs.Morpeh.World world)
         {
-            _firstFeature.Initialize();
-            _secondFeature.Initialize();
+            _firstFeature.Initialize(world);
+            _secondFeature.Initialize(world);
         }
 
         public async Cysharp.Threading.Tasks.UniTask StartAsync(System.Threading.CancellationToken cancellation)

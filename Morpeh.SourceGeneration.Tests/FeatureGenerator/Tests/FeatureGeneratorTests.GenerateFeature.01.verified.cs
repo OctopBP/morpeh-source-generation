@@ -15,16 +15,16 @@ namespace Features.TestFeature
             objectResolver.Inject(_secondSystem);
         }
 
-        public void Initialize()
+        public void Initialize(Scellecs.Morpeh.World world)
         {
-            _firstSystem.Initialize();
-            _secondSystem.Initialize();
+            _firstSystem.Initialize(world);
+            _secondSystem.Initialize(world);
         }
 
         public async Cysharp.Threading.Tasks.UniTask StartAsync(System.Threading.CancellationToken cancellation)
         {
             await _firstSystem.StartAsync(cancellation);
-            await _secondSystem.StartAsync(cancellation);
+            _secondSystem.Start();
         }
 
         public void Tick()

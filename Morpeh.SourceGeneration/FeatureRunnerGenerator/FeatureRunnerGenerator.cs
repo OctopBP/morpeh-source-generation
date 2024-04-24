@@ -19,8 +19,7 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
                 predicate: static (node, _) => IsSyntaxTargetForGeneration(node),
                 transform: static (syntaxContext, token) => GetSemanticTargetForGeneration(syntaxContext, token))
             .Collect()
-            .Select((array, _) => array.OfType<FeatureRunnerToGenerate>().ToImmutableArray())
-            .SelectMany(static (array, _) => array);
+            .SelectMany(static (array, _) => array.Collect());
 
         context.RegisterPostInitializationOutput(i => i.AddSource("FeatureInterface.g", FeatureRunnerInterface.InterfaceText));
         
@@ -32,7 +31,7 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
         return node is ClassDeclarationSyntax;
     }
     
-    private static FeatureRunnerToGenerate? GetSemanticTargetForGeneration(
+    private static Optional<FeatureRunnerToGenerate> GetSemanticTargetForGeneration(
         GeneratorSyntaxContext ctx, CancellationToken token)
     {
         var classDeclarationSyntax = (ClassDeclarationSyntax) ctx.Node;
@@ -40,12 +39,12 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
         var classDeclarationSymbol = ctx.SemanticModel.GetDeclaredSymbol(classDeclarationSyntax, token);
         if (classDeclarationSymbol is not ITypeSymbol classDeclarationTypeSymbol)
         {
-            return null;
+            return OptionalExt.None<FeatureRunnerToGenerate>();
         }
         
         if (!classDeclarationSyntax.HaveInterface(FeatureRunnerInterface.FeatureRunnerInterfaceName))
         {
-            return null;
+            return OptionalExt.None<FeatureRunnerToGenerate>();
         }
         
         var systems = new List<FeaturesToGenerate>();
@@ -127,12 +126,12 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
         
         void AppendStartAsync()
         {
-            builder.AppendLineWithIdent("public void Initialize()");
+            builder.AppendLineWithIdent("public void Initialize(Scellecs.Morpeh.World world)");
             using (new CodeBuilder.BracketsBlock(builder))
             {
                 foreach (var systemToGenerate in featureRunnerToGenerate.Systems)
                 {
-                    builder.AppendIdent().Append(systemToGenerate.Name).Append(".Initialize();").AppendLine();
+                    builder.AppendIdent().Append(systemToGenerate.Name).Append(".Initialize(world);").AppendLine();
                 }
             }
         }

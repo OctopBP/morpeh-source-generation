@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Text;
 using System.Threading;
 using Microsoft.CodeAnalysis;
@@ -20,8 +19,7 @@ public sealed class FeatureGenerator : IIncrementalGenerator
                 predicate: static (node, _) => IsSyntaxTargetForGeneration(node),
                 transform: static (syntaxContext, token) => GetSemanticTargetForGeneration(syntaxContext, token))
             .Collect()
-            .Select((array, _) => array.OfType<FeatureToGenerate>().ToImmutableArray())
-            .SelectMany(static (array, _) => array);
+            .SelectMany(static (array, _) => array.Collect());
 
         context.RegisterPostInitializationOutput(i => i.AddSource("FeatureInterface.g", FeatureInterface.InterfaceText));
         
@@ -33,19 +31,19 @@ public sealed class FeatureGenerator : IIncrementalGenerator
         return node is ClassDeclarationSyntax;
     }
     
-    private static FeatureToGenerate? GetSemanticTargetForGeneration(GeneratorSyntaxContext ctx, CancellationToken token)
+    private static Optional<FeatureToGenerate> GetSemanticTargetForGeneration(GeneratorSyntaxContext ctx, CancellationToken token)
     {
         var classDeclarationSyntax = (ClassDeclarationSyntax) ctx.Node;
 
         var classDeclarationSymbol = ctx.SemanticModel.GetDeclaredSymbol(classDeclarationSyntax, token);
         if (classDeclarationSymbol is not ITypeSymbol classDeclarationTypeSymbol)
         {
-            return null;
+            return OptionalExt.None<FeatureToGenerate>();
         }
         
         if (!classDeclarationSyntax.HaveInterface(FeatureInterface.FeatureInterfaceName))
         {
-            return null;
+            return OptionalExt.None<FeatureToGenerate>();
         }
         
         var systems = new List<SystemToGenerate>();
@@ -63,9 +61,14 @@ public sealed class FeatureGenerator : IIncrementalGenerator
             }
             
             var systemType = SystemTypeExt.ResolveSystemType(typeSymbol);
+            if (!systemType.HasValue)
+            {
+                continue;
+            }
+            
             foreach (var variable in fieldDeclaration.Declaration.Variables)
             {
-                systems.Add(new SystemToGenerate(typeSymbol, systemType, variable.Identifier.ToString()));
+                systems.Add(new SystemToGenerate(typeSymbol, systemType.Value, variable.Identifier.ToString()));
             }
         }
         
@@ -132,12 +135,12 @@ public sealed class FeatureGenerator : IIncrementalGenerator
         
         void AppendStartAsync()
         {
-            builder.AppendLineWithIdent("public void Initialize()");
+            builder.AppendLineWithIdent("public void Initialize(Scellecs.Morpeh.World world)");
             using (new CodeBuilder.BracketsBlock(builder))
             {
                 foreach (var systemToGenerate in featureToGenerate.Systems)
                 {
-                    builder.AppendIdent().Append(systemToGenerate.Name).Append(".Initialize();").AppendLine();
+                    builder.AppendIdent().Append(systemToGenerate.Name).Append(".Initialize(world);").AppendLine();
                 }
             }
         }
@@ -149,8 +152,15 @@ public sealed class FeatureGenerator : IIncrementalGenerator
             {
                 foreach (var systemToGenerate in featureToGenerate.Systems)
                 {
-                    builder.AppendIdent().Append("await ").Append(systemToGenerate.Name)
-                        .Append(".StartAsync(cancellation);").AppendLine();
+                    if (systemToGenerate.SystemType.HasFlag(SystemType.AsyncInitialize))
+                    {
+                        builder.AppendIdent().Append("await ").Append(systemToGenerate.Name)
+                            .Append(".StartAsync(cancellation);").AppendLine();
+                    }
+                    else
+                    {
+                        builder.AppendIdent().Append(systemToGenerate.Name).Append(".Start();").AppendLine();
+                    }
                 }
             }
         }
@@ -162,7 +172,7 @@ public sealed class FeatureGenerator : IIncrementalGenerator
             {
                 foreach (var systemToGenerate in featureToGenerate.Systems)
                 {
-                    if (systemToGenerate.SystemType == SystemType.Update)
+                    if (systemToGenerate.SystemType.HasFlag(SystemType.Update))
                     {
                         builder.AppendIdent().Append(systemToGenerate.Name).Append(".Tick();").AppendLine();
                     }
