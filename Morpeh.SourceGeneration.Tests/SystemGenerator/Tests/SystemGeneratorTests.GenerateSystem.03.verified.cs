@@ -3,7 +3,7 @@ using Scellecs.Morpeh;
 
 namespace TestFeature.TestSystem
 {
-    public partial class TestSystem : VContainer.Unity.IStartable, VContainer.Unity.ITickable
+    public partial class TestSystem : VContainer.Unity.ITickable
     {
         public void Initialize(Scellecs.Morpeh.World world)
         {

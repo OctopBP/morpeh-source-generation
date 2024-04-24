@@ -7,33 +7,32 @@ namespace Morpeh.SourceGeneration.SystemGenerator;
 [Flags]
 public enum SystemType
 {
-    Initialize = 0,
-    AsyncInitialize = 1,
-    Update = 2,
-    UpdateWithAsyncInitialize = AsyncInitialize | Update,
+    None = 0,
+    Initialize = 1,
+    AsyncInitialize = 2,
+    Update = 4,
 }
 
 public static class SystemTypeExt
 {
-    public static Optional<SystemType> ResolveSystemType(ITypeSymbol typeSymbol)
+    public static SystemType ResolveSystemType(ITypeSymbol typeSymbol)
     {
+        var type = SystemType.None;
         if (typeSymbol.HaveInterface(SystemInterfaces.UpdateInterfaceName))
         {
-            return typeSymbol.HaveInterface(SystemInterfaces.AsyncInitializeInterfaceName)
-                ? SystemType.UpdateWithAsyncInitialize
-                : SystemType.Update;
+            type |= SystemType.Update;
         }
      
         if (typeSymbol.HaveInterface(SystemInterfaces.InitializeInterfaceName))
         {
-            return SystemType.Initialize;
+            type |= SystemType.Initialize;
         }
         
         if (typeSymbol.HaveInterface(SystemInterfaces.AsyncInitializeInterfaceName))
         {
-            return SystemType.AsyncInitialize;
+            type |= SystemType.AsyncInitialize;
         }
 
-        return OptionalExt.None<SystemType>();
+        return type;
     }
 }

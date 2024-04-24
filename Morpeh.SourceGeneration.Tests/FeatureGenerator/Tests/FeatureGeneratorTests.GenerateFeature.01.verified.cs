@@ -24,7 +24,6 @@ namespace Features.TestFeature
         public async Cysharp.Threading.Tasks.UniTask StartAsync(System.Threading.CancellationToken cancellation)
         {
             await _firstSystem.StartAsync(cancellation);
-            _secondSystem.Start();
         }
 
         public void Tick()

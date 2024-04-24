@@ -87,6 +87,21 @@ public class CodeBuilder
         }
         return this;
     }
+    
+    public CodeBuilder AppendArray<T>(T[] array, Action<T, CodeBuilder> func, Action<CodeBuilder> splitter)
+    {
+        for(var i = 0; i < array.Length; i++) 
+        {
+            if (i != 0)
+            {
+                splitter(this);
+            }
+            
+            func(array[i], this);
+        }
+        
+        return this;
+    }
 
     public CodeBuilder OpenBrackets()
     {

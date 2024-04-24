@@ -1,7 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using Microsoft.CodeAnalysis;
@@ -50,7 +47,7 @@ public sealed class SystemGenerator : IIncrementalGenerator
         }
         
         var systemType = SystemTypeExt.ResolveSystemType(classDeclarationTypeSymbol);
-        if (!systemType.HasValue)
+        if (systemType == SystemType.None)
         {
             return OptionalExt.None<SystemToGenerate>();
         }
@@ -117,7 +114,7 @@ public sealed class SystemGenerator : IIncrementalGenerator
             }
         }
         
-        return new SystemToGenerate(classDeclarationTypeSymbol, systemType.Value, stashes.ToArray(), filters.ToArray());
+        return new SystemToGenerate(classDeclarationTypeSymbol, systemType, stashes.ToArray(), filters.ToArray());
     }
 
     private static IEnumerable<ISymbol> ExtractTypeofType(GeneratorSyntaxContext ctx, AttributeSyntax filterAttribute)
@@ -170,19 +167,30 @@ public sealed class SystemGenerator : IIncrementalGenerator
         {
             builder.AppendIdent().Append("public partial class ").Append(systemToGenerate.TypeSymbol.Name);
 
-            var interfaces2 = systemToGenerate.SystemType switch {
-                SystemType.Initialize => " : VContainer.Unity.IStartable",
-                SystemType.AsyncInitialize => " : VContainer.Unity.IAsyncStartable",
-                SystemType.Update => " : VContainer.Unity.IStartable, VContainer.Unity.ITickable",
-                SystemType.UpdateWithAsyncInitialize => " : VContainer.Unity.IAsyncStartable, VContainer.Unity.ITickable",
-                _ => throw new ArgumentOutOfRangeException()
-            };
+            var interfaces = new List<string>();
+            if (systemToGenerate.SystemType.HasFlag(SystemType.Initialize))
+            {
+                interfaces.Add("VContainer.Unity.IStartable");
+            }
             
-            builder.Append(interfaces2).AppendLine();
+            if (systemToGenerate.SystemType.HasFlag(SystemType.AsyncInitialize))
+            {
+                interfaces.Add("VContainer.Unity.IAsyncStartable");
+            }
+            
+            if (systemToGenerate.SystemType.HasFlag(SystemType.Update))
+            {
+                interfaces.Add("VContainer.Unity.ITickable");
+            }
+
+            if (interfaces.Count > 0)
+            {
+                builder.Append(" : ").AppendArray(interfaces.ToArray(), (s, b) => b.Append(s), b => b.Append(", "));
+            }
+            builder.AppendLine();
 
             using (new CodeBuilder.BracketsBlock(builder))
             {
-                AppendWorld();
                 AppendInitialize();
                 builder.AppendLine();
                 AppendDispose();
@@ -190,28 +198,12 @@ public sealed class SystemGenerator : IIncrementalGenerator
         }
         
         return builder.ToString();
-
-        void AppendWorld()
-        {
-            if (systemToGenerate.Filters.Length == 0 && systemToGenerate.Stashes.Length == 0)
-            {
-                return;
-            }
-
-            // builder.AppendLineWithIdent("private Scellecs.Morpeh.World _world;");
-            // builder.AppendLine();
-        }
         
         void AppendInitialize()
         {
             builder.AppendLineWithIdent("public void Initialize(Scellecs.Morpeh.World world)");
             using (new CodeBuilder.BracketsBlock(builder))
             {
-                // if (systemToGenerate.Filters.Length != 0 || systemToGenerate.Stashes.Length != 0)
-                // {
-                //     builder.AppendLineWithIdent("_world = world");
-                // }
-
                 builder.AppendLineWithIdent("// Stashes");
 
                 foreach (var stash in systemToGenerate.Stashes)

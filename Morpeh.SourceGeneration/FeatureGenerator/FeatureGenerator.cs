@@ -61,14 +61,14 @@ public sealed class FeatureGenerator : IIncrementalGenerator
             }
             
             var systemType = SystemTypeExt.ResolveSystemType(typeSymbol);
-            if (!systemType.HasValue)
+            if (systemType == SystemType.None)
             {
                 continue;
             }
             
             foreach (var variable in fieldDeclaration.Declaration.Variables)
             {
-                systems.Add(new SystemToGenerate(typeSymbol, systemType.Value, variable.Identifier.ToString()));
+                systems.Add(new SystemToGenerate(typeSymbol, systemType, variable.Identifier.ToString()));
             }
         }
         
@@ -157,7 +157,8 @@ public sealed class FeatureGenerator : IIncrementalGenerator
                         builder.AppendIdent().Append("await ").Append(systemToGenerate.Name)
                             .Append(".StartAsync(cancellation);").AppendLine();
                     }
-                    else
+                    
+                    if (systemToGenerate.SystemType.HasFlag(SystemType.Initialize))
                     {
                         builder.AppendIdent().Append(systemToGenerate.Name).Append(".Start();").AppendLine();
                     }
