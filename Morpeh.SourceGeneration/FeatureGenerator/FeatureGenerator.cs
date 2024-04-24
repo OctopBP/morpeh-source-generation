@@ -99,7 +99,7 @@ public sealed class FeatureGenerator : IIncrementalGenerator
                 builder.AppendLine();
                 AppendUniTask();
                 builder.AppendLine();
-                AppendTick();
+                AppendUpdate();
                 builder.AppendLine();
                 AppendDispose();
             }
@@ -155,27 +155,27 @@ public sealed class FeatureGenerator : IIncrementalGenerator
                     if (systemToGenerate.SystemType.HasFlag(SystemType.AsyncInitialize))
                     {
                         builder.AppendIdent().Append("await ").Append(systemToGenerate.Name)
-                            .Append(".StartAsync(cancellation);").AppendLine();
+                            .Append(".CallStartAsync(cancellation);").AppendLine();
                     }
                     
                     if (systemToGenerate.SystemType.HasFlag(SystemType.Initialize))
                     {
-                        builder.AppendIdent().Append(systemToGenerate.Name).Append(".Start();").AppendLine();
+                        builder.AppendIdent().Append(systemToGenerate.Name).Append(".CallStart();").AppendLine();
                     }
                 }
             }
         }
         
-        void AppendTick()
+        void AppendUpdate()
         {
-            builder.AppendLineWithIdent("public void Tick()");
+            builder.AppendLineWithIdent("public void Update()");
             using (new CodeBuilder.BracketsBlock(builder))
             {
                 foreach (var systemToGenerate in featureToGenerate.Systems)
                 {
                     if (systemToGenerate.SystemType.HasFlag(SystemType.Update))
                     {
-                        builder.AppendIdent().Append(systemToGenerate.Name).Append(".Tick();").AppendLine();
+                        builder.AppendIdent().Append(systemToGenerate.Name).Append(".CallUpdate();").AppendLine();
                     }
                 }
             }

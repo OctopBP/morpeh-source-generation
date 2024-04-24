@@ -90,7 +90,7 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
                 builder.AppendLine();
                 AppendUniTask();
                 builder.AppendLine();
-                AppendTick();
+                AppendUpdate();
                 builder.AppendLine();
                 AppendDispose();
             }
@@ -149,14 +149,14 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
             }
         }
         
-        void AppendTick()
+        void AppendUpdate()
         {
-            builder.AppendLineWithIdent("public void Tick()");
+            builder.AppendLineWithIdent("public void Update()");
             using (new CodeBuilder.BracketsBlock(builder))
             {
                 foreach (var systemToGenerate in featureRunnerToGenerate.Systems)
                 {
-                    builder.AppendIdent().Append(systemToGenerate.Name).Append(".Tick();").AppendLine();
+                    builder.AppendIdent().Append(systemToGenerate.Name).Append(".Update();").AppendLine();
                 }
             }
         }

@@ -23,12 +23,12 @@ namespace Features.TestFeature
 
         public async Cysharp.Threading.Tasks.UniTask StartAsync(System.Threading.CancellationToken cancellation)
         {
-            await _firstSystem.StartAsync(cancellation);
+            await _firstSystem.CallStartAsync(cancellation);
         }
 
-        public void Tick()
+        public void Update()
         {
-            _secondSystem.Tick();
+            _secondSystem.CallUpdate();
         }
 
         public void Dispose()

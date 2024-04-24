@@ -27,10 +27,10 @@ namespace Features.FeatureRunner
             await _secondFeature.StartAsync(cancellation);
         }
 
-        public void Tick()
+        public void Update()
         {
-            _firstFeature.Tick();
-            _secondFeature.Tick();
+            _firstFeature.Update();
+            _secondFeature.Update();
         }
 
         public void Dispose()

@@ -191,24 +191,54 @@ public sealed class SystemGenerator : IIncrementalGenerator
 
             using (new CodeBuilder.BracketsBlock(builder))
             {
+                AppendWorld();
+                builder.AppendLine();
                 AppendInitialize();
                 builder.AppendLine();
+                
+                
+                if (systemToGenerate.SystemType.HasFlag(SystemType.Initialize))
+                {
+                    AppendStart();
+                    builder.AppendLine();
+                }
+            
+                if (systemToGenerate.SystemType.HasFlag(SystemType.AsyncInitialize))
+                {
+                    AppendStartAsync();
+                    builder.AppendLine();
+                }
+            
+                if (systemToGenerate.SystemType.HasFlag(SystemType.Update))
+                {
+                    AppendUpdate();
+                    builder.AppendLine();
+                }
+                
                 AppendDispose();
             }
         }
         
         return builder.ToString();
+
+        void AppendWorld()
+        {
+            builder.AppendLineWithIdent("private World _world;");
+        }
         
         void AppendInitialize()
         {
             builder.AppendLineWithIdent("public void Initialize(Scellecs.Morpeh.World world)");
             using (new CodeBuilder.BracketsBlock(builder))
             {
+                builder.AppendLineWithIdent("_world = world;");
+                builder.AppendLine();
+                
                 builder.AppendLineWithIdent("// Stashes");
 
                 foreach (var stash in systemToGenerate.Stashes)
                 {
-                    builder.AppendIdent().Append(stash.Name).Append(" = world.GetStash<")
+                    builder.AppendIdent().Append(stash.Name).Append(" = _world.GetStash<")
                         .Append(stash.Type.ToDisplayString()).Append(">();").AppendLine();
                 }
 
@@ -217,7 +247,7 @@ public sealed class SystemGenerator : IIncrementalGenerator
 
                 foreach (var filter in systemToGenerate.Filters)
                 {
-                    builder.AppendIdent().Append(filter.Name).Append(" = world.Filter");
+                    builder.AppendIdent().Append(filter.Name).Append(" = _world.Filter");
                     foreach (var with in filter.With)
                     {
                         builder.Append(".With<").Append(with.ToDisplayString()).Append(">()");
@@ -233,6 +263,36 @@ public sealed class SystemGenerator : IIncrementalGenerator
             }
         }
 
+        void AppendStart()
+        {
+            builder.AppendLineWithIdent("public void CallStart()");
+            using (new CodeBuilder.BracketsBlock(builder))
+            {
+                builder.AppendLineWithIdent("Start();");
+                builder.AppendLineWithIdent("_world.Commit();");
+            }
+        }
+        
+        void AppendStartAsync()
+        {
+            builder.AppendLineWithIdent("public async Cysharp.Threading.Tasks.UniTask CallStartAsync(System.Threading.CancellationToken cancellationToken)");
+            using (new CodeBuilder.BracketsBlock(builder))
+            {
+                builder.AppendLineWithIdent("await StartAsync(cancellationToken);");
+                builder.AppendLineWithIdent("_world.Commit();");
+            }
+        }
+        
+        void AppendUpdate()
+        {
+            builder.AppendLineWithIdent("public void CallUpdate()");
+            using (new CodeBuilder.BracketsBlock(builder))
+            {
+                builder.AppendLineWithIdent("Tick();");
+                builder.AppendLineWithIdent("_world.Commit();");
+            }
+        }
+        
         void AppendDispose()
         {
             builder.AppendLineWithIdent("public void Dispose()");
