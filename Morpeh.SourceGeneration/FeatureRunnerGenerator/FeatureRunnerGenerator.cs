@@ -78,7 +78,7 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
         using (new CodeBuilder.NamespaceBlock(builder, featureRunnerToGenerate.TypeSymbol))
         {
             builder.AppendIdent().Append("public partial class ").Append(featureRunnerToGenerate.TypeSymbol.Name)
-                .AppendLine();
+                .Append(" : System.IDisposable").AppendLine();
             
             using (new CodeBuilder.BracketsBlock(builder))
             {
@@ -86,9 +86,9 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
                 builder.AppendLine();
                 AppendInject();
                 builder.AppendLine();
-                AppendStartAsync();
+                AppendInitialize();
                 builder.AppendLine();
-                AppendUniTask();
+                AppendStart();
                 builder.AppendLine();
                 AppendUpdate();
                 builder.AppendLine();
@@ -124,7 +124,7 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
             }
         }
         
-        void AppendStartAsync()
+        void AppendInitialize()
         {
             builder.AppendLineWithIdent("public void Initialize(Scellecs.Morpeh.World world)");
             using (new CodeBuilder.BracketsBlock(builder))
@@ -136,15 +136,15 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
             }
         }
         
-        void AppendUniTask()
+        void AppendStart()
         {
-            builder.AppendLineWithIdent("public async Cysharp.Threading.Tasks.UniTask StartAsync(System.Threading.CancellationToken cancellation)");
+            builder.AppendLineWithIdent("public void Start()");
             using (new CodeBuilder.BracketsBlock(builder))
             {
                 foreach (var systemToGenerate in featureRunnerToGenerate.Systems)
                 {
-                    builder.AppendIdent().Append("await ").Append(systemToGenerate.Name)
-                        .Append(".StartAsync(cancellation);").AppendLine();
+                    builder.AppendIdent().Append(systemToGenerate.Name)
+                        .Append(".Start();").AppendLine();
                 }
             }
         }

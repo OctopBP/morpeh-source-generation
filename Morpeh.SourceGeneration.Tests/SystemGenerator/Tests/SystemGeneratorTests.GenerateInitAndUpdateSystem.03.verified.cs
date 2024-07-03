@@ -1,9 +1,9 @@
-﻿//HintName: TestAsyncSystem.g.cs
+﻿//HintName: TestInitAndUpdateSystem.g.cs
 using Scellecs.Morpeh;
 
-namespace TestFeature.TestAsyncSystem
+namespace TestFeature.TestInitAndUpdateSystem
 {
-    public partial class TestAsyncSystem : VContainer.Unity.IAsyncStartable, VContainer.Unity.ITickable
+    public partial class TestInitAndUpdateSystem : System.IDisposable
     {
         private World _world;
 
@@ -20,15 +20,15 @@ namespace TestFeature.TestAsyncSystem
             _filter2 = _world.Filter.With<Component1>().Build();
         }
 
-        public async Cysharp.Threading.Tasks.UniTask CallStartAsync(System.Threading.CancellationToken cancellationToken)
+        public void CallStart()
         {
-            await StartAsync(cancellationToken);
+            Start();
             _world.Commit();
         }
 
         public void CallUpdate()
         {
-            Tick();
+            Update();
             _world.Commit();
         }
 

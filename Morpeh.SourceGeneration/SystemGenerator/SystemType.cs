@@ -9,8 +9,7 @@ public enum SystemType
 {
     None = 0,
     Initialize = 1,
-    AsyncInitialize = 2,
-    Update = 4,
+    Update = 2,
 }
 
 public static class SystemTypeExt
@@ -26,11 +25,6 @@ public static class SystemTypeExt
         if (typeSymbol.HaveInterface(SystemInterfaces.InitializeInterfaceName))
         {
             type |= SystemType.Initialize;
-        }
-        
-        if (typeSymbol.HaveInterface(SystemInterfaces.AsyncInitializeInterfaceName))
-        {
-            type |= SystemType.AsyncInitialize;
         }
 
         return type;

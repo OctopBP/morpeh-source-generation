@@ -87,7 +87,8 @@ public sealed class FeatureGenerator : IIncrementalGenerator
 
         using (new CodeBuilder.NamespaceBlock(builder, featureToGenerate.TypeSymbol))
         {
-            builder.AppendIdent().Append("public partial class ").Append(featureToGenerate.TypeSymbol.Name).AppendLine();
+            builder.AppendIdent().Append("public partial class ").Append(featureToGenerate.TypeSymbol.Name)
+                .Append(" : System.IDisposable").AppendLine();
             
             using (new CodeBuilder.BracketsBlock(builder))
             {
@@ -95,9 +96,9 @@ public sealed class FeatureGenerator : IIncrementalGenerator
                 builder.AppendLine();
                 AppendInject();
                 builder.AppendLine();
-                AppendStartAsync();
+                AppendInitialize();
                 builder.AppendLine();
-                AppendUniTask();
+                AppendStart();
                 builder.AppendLine();
                 AppendUpdate();
                 builder.AppendLine();
@@ -133,7 +134,7 @@ public sealed class FeatureGenerator : IIncrementalGenerator
             }
         }
         
-        void AppendStartAsync()
+        void AppendInitialize()
         {
             builder.AppendLineWithIdent("public void Initialize(Scellecs.Morpeh.World world)");
             using (new CodeBuilder.BracketsBlock(builder))
@@ -145,19 +146,13 @@ public sealed class FeatureGenerator : IIncrementalGenerator
             }
         }
         
-        void AppendUniTask()
+        void AppendStart()
         {
-            builder.AppendLineWithIdent("public async Cysharp.Threading.Tasks.UniTask StartAsync(System.Threading.CancellationToken cancellation)");
+            builder.AppendLineWithIdent("public void Start()");
             using (new CodeBuilder.BracketsBlock(builder))
             {
                 foreach (var systemToGenerate in featureToGenerate.Systems)
                 {
-                    if (systemToGenerate.SystemType.HasFlag(SystemType.AsyncInitialize))
-                    {
-                        builder.AppendIdent().Append("await ").Append(systemToGenerate.Name)
-                            .Append(".CallStartAsync(cancellation);").AppendLine();
-                    }
-                    
                     if (systemToGenerate.SystemType.HasFlag(SystemType.Initialize))
                     {
                         builder.AppendIdent().Append(systemToGenerate.Name).Append(".CallStart();").AppendLine();

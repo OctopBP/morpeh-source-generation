@@ -3,7 +3,7 @@ using Scellecs.Morpeh;
 
 namespace TestFeature.TestSystem
 {
-    public partial class TestSystem : VContainer.Unity.ITickable
+    public partial class TestSystem : System.IDisposable
     {
         private World _world;
 
@@ -22,7 +22,7 @@ namespace TestFeature.TestSystem
 
         public void CallUpdate()
         {
-            Tick();
+            Update();
             _world.Commit();
         }
 

@@ -1,7 +1,7 @@
 ﻿//HintName: FeatureRunner.g.cs
 namespace Features.FeatureRunner
 {
-    public partial class FeatureRunner
+    public partial class FeatureRunner : System.IDisposable
     {
         public FeatureRunner()
         {
@@ -21,10 +21,10 @@ namespace Features.FeatureRunner
             _secondFeature.Initialize(world);
         }
 
-        public async Cysharp.Threading.Tasks.UniTask StartAsync(System.Threading.CancellationToken cancellation)
+        public void Start()
         {
-            await _firstFeature.StartAsync(cancellation);
-            await _secondFeature.StartAsync(cancellation);
+            _firstFeature.Start();
+            _secondFeature.Start();
         }
 
         public void Update()

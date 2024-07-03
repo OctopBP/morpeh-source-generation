@@ -44,7 +44,7 @@ public class SystemGeneratorTests
     }
     
     [Fact]
-    public Task GenerateAsyncSystem()
+    public Task GenerateInitAndUpdateSystem()
     {
         const string source =
             """
@@ -52,9 +52,9 @@ public class SystemGeneratorTests
             public struct Component2 {}
             public struct Component3 {}
 
-            namespace TestFeature.TestAsyncSystem
+            namespace TestFeature.TestInitAndUpdateSystem
             {
-                public partial class TestAsyncSystem : IUpdateSystem, IAsyncInitializeSystem
+                public partial class TestInitAndUpdateSystem : IUpdateSystem, IInitializeSystem
                 {
                     [Inject] private ISomeService _someService;
                     
@@ -66,8 +66,6 @@ public class SystemGeneratorTests
                     
                     [With(typeof(Component1))]
                     private Filter _filter2;
-            
-                    public async UniTask StartAsync(CancellationToken cancellation) { }
             
                     public void Update()
                     {

@@ -9,12 +9,11 @@ public class FeatureGeneratorTests
         const string source =
             """
             public interface IInitializeSystem { }
-            public interface IAsyncInitializeSystem { }
             public interface IUpdateSystem { }
             
             namespace Features.TestFeature.Systems
             {{
-                public class FirstSystem : IAsyncInitializeSystem { }
+                public class FirstSystem : IInitializeSystem { }
                 public class SecondSystem : IUpdateSystem { }
             }}
             

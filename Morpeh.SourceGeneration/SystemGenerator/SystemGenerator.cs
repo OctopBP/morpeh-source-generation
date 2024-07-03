@@ -165,29 +165,8 @@ public sealed class SystemGenerator : IIncrementalGenerator
 
         using (new CodeBuilder.NamespaceBlock(builder, systemToGenerate.TypeSymbol))
         {
-            builder.AppendIdent().Append("public partial class ").Append(systemToGenerate.TypeSymbol.Name);
-
-            var interfaces = new List<string>();
-            if (systemToGenerate.SystemType.HasFlag(SystemType.Initialize))
-            {
-                interfaces.Add("VContainer.Unity.IStartable");
-            }
-            
-            if (systemToGenerate.SystemType.HasFlag(SystemType.AsyncInitialize))
-            {
-                interfaces.Add("VContainer.Unity.IAsyncStartable");
-            }
-            
-            if (systemToGenerate.SystemType.HasFlag(SystemType.Update))
-            {
-                interfaces.Add("VContainer.Unity.ITickable");
-            }
-
-            if (interfaces.Count > 0)
-            {
-                builder.Append(" : ").AppendArray(interfaces.ToArray(), (s, b) => b.Append(s), b => b.Append(", "));
-            }
-            builder.AppendLine();
+            builder.AppendIdent().Append("public partial class ").Append(systemToGenerate.TypeSymbol.Name)
+                .Append(" : System.IDisposable").AppendLine();
 
             using (new CodeBuilder.BracketsBlock(builder))
             {
@@ -200,12 +179,6 @@ public sealed class SystemGenerator : IIncrementalGenerator
                 if (systemToGenerate.SystemType.HasFlag(SystemType.Initialize))
                 {
                     AppendStart();
-                    builder.AppendLine();
-                }
-            
-                if (systemToGenerate.SystemType.HasFlag(SystemType.AsyncInitialize))
-                {
-                    AppendStartAsync();
                     builder.AppendLine();
                 }
             
@@ -273,22 +246,12 @@ public sealed class SystemGenerator : IIncrementalGenerator
             }
         }
         
-        void AppendStartAsync()
-        {
-            builder.AppendLineWithIdent("public async Cysharp.Threading.Tasks.UniTask CallStartAsync(System.Threading.CancellationToken cancellationToken)");
-            using (new CodeBuilder.BracketsBlock(builder))
-            {
-                builder.AppendLineWithIdent("await StartAsync(cancellationToken);");
-                builder.AppendLineWithIdent("_world.Commit();");
-            }
-        }
-        
         void AppendUpdate()
         {
             builder.AppendLineWithIdent("public void CallUpdate()");
             using (new CodeBuilder.BracketsBlock(builder))
             {
-                builder.AppendLineWithIdent("Tick();");
+                builder.AppendLineWithIdent("Update();");
                 builder.AppendLineWithIdent("_world.Commit();");
             }
         }

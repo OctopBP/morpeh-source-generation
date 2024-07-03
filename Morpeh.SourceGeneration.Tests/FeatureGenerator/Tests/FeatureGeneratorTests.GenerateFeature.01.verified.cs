@@ -1,7 +1,7 @@
 ﻿//HintName: TestFeature.g.cs
 namespace Features.TestFeature
 {
-    public partial class TestFeature
+    public partial class TestFeature : System.IDisposable
     {
         public TestFeature()
         {
@@ -21,9 +21,9 @@ namespace Features.TestFeature
             _secondSystem.Initialize(world);
         }
 
-        public async Cysharp.Threading.Tasks.UniTask StartAsync(System.Threading.CancellationToken cancellation)
+        public void Start()
         {
-            await _firstSystem.CallStartAsync(cancellation);
+            _firstSystem.CallStart();
         }
 
         public void Update()
