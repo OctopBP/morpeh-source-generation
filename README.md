@@ -5,7 +5,7 @@
 ```csharp
 public partial class FeatureRunner : IFeatureRunner
 {
-	private readonly SomeFeature _someFeature;
+    private readonly SomeFeature _someFeature;
 }
 ```
 
@@ -14,8 +14,8 @@ public partial class FeatureRunner : IFeatureRunner
 ```csharp
 public partial class SomeFeature : IFeature
 {
-	private readonly SomeSystem1 _someSystem1;
-	private readonly SomeSystem2 _someSystem2;
+    private readonly SomeSystem1 _someSystem1;
+    private readonly SomeSystem2 _someSystem2;
 }
 ```
 
@@ -26,10 +26,10 @@ public partial class SomeFeature : IFeature
 ```csharp
 public partial class SomeSystem1 : IInitializeSystem
 {
-	public void Start()
-	{
-		// ...        
-	}
+    public void Start()
+    {
+        // ...        
+    }
 }
 ```
 
@@ -38,10 +38,10 @@ public partial class SomeSystem1 : IInitializeSystem
 ```csharp
 public partial class SomeSystem2 : IUpdateSystem
 {
-	public void Update()
-	{
-		// ...        
-	}
+    public void Update()
+    {
+        // ...        
+    }
 }
 ```
 
@@ -55,7 +55,7 @@ public partial class SomeSystem : IStartSystem
     private Stash<InputMoveDirection> _inputStash;
     private Stash<PlayerPosition> _playerPosition;
 
-	// ...
+    // ...
 }
 ```
 
@@ -67,12 +67,12 @@ For fillers you can use With and Without attributes. It also will be initialized
 public partial class SomeSystem : IStartSystem
 {
     [With(typeof(InputMoveDirection))]
-	private Filter _inputFilter;
+    private Filter _inputFilter;
 
     [With(typeof(Player), typeof(PlayerPosition))]
-	[Without(typeof(Disabled))]
-	private Filter _playerFilter;
+    [Without(typeof(Disabled))]
+    private Filter _playerFilter;
 
-	// ...
+    // ...
 }
 ```
