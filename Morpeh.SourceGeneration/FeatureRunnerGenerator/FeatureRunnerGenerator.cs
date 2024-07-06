@@ -88,8 +88,12 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
             
             using (new CodeBuilder.BracketsBlock(builder))
             {
-                AppendWorld();
-                builder.AppendLine();
+                if (featureRunnerToGenerate.WithWorld)
+                {
+                    AppendWorld();
+                    builder.AppendLine();
+                }
+                
                 AppendConstructor();
                 builder.AppendLine();
                 AppendInject();
@@ -122,11 +126,6 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
         
         void AppendWorld()
         {
-            if (!featureRunnerToGenerate.WithWorld)
-            {
-                return;
-            }
-
             builder.AppendLineWithIdent("private readonly Scellecs.Morpeh.World _world = Scellecs.Morpeh.World.Create();");
         }
         

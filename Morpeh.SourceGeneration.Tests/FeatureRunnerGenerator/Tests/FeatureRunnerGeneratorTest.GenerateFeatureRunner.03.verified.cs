@@ -1,9 +1,11 @@
-﻿//HintName: FeatureRunner.g.cs
+﻿//HintName: FeatureRunnerWithWorld.g.cs
 namespace Features.FeatureRunner
 {
-    public partial class FeatureRunner : System.IDisposable
+    public partial class FeatureRunnerWithWorld : System.IDisposable
     {
-        public FeatureRunner()
+        private readonly Scellecs.Morpeh.World _world = Scellecs.Morpeh.World.Create();
+
+        public FeatureRunnerWithWorld()
         {
             _firstFeature = new Features.FirstFeature();
             _secondFeature = new Features.SecondFeature();
@@ -15,10 +17,10 @@ namespace Features.FeatureRunner
             _secondFeature.Inject(objectResolver);
         }
 
-        public void Initialize(Scellecs.Morpeh.World world)
+        public void Initialize()
         {
-            _firstFeature.Initialize(world);
-            _secondFeature.Initialize(world);
+            _firstFeature.Initialize(_world);
+            _secondFeature.Initialize(_world);
         }
 
         public void Start()
