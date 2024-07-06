@@ -21,11 +21,9 @@ public class SystemGeneratorTests
                     private Stash<Component1> _stash1;
                     private Stash<Component2> _stash2;
                     
-                    [With(typeof(Component1), typeof(Component2)), Without(typeof(Component3))]
-                    private Filter _filter1;
-                    
-                    [With(typeof(Component1))]
-                    private Filter _filter2;
+                    private Filter<(Component1, Component2), Component3> _filter1;
+                    private Filter<Component1> _filter2;
+                    private Filter<Component1, (Component2, Component3)> _filter3;
             
                     public void Start() { }
             
@@ -61,11 +59,9 @@ public class SystemGeneratorTests
                     private Stash<Component1> _stash1;
                     private Stash<Component2> _stash2;
                     
-                    [With(typeof(Component1), typeof(Component2)), Without(typeof(Component3))]
-                    private Filter _filter1;
-                    
-                    [With(typeof(Component1))]
-                    private Filter _filter2;
+                    private Filter<(Component1, Component2), Component3> _filter1;
+                    private Filter<Component1> _filter2;
+                    private Filter<Component1, (Component2, Component3)> _filter3;
             
                     public void Update()
                     {

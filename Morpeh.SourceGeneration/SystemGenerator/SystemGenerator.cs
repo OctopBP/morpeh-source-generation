@@ -1,11 +1,11 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Morpeh.SourceGeneration.Common;
-using Morpeh.SourceGeneration.SystemGenerator.Filter;
 
 namespace Morpeh.SourceGeneration.SystemGenerator;
 
@@ -21,12 +21,7 @@ public sealed class SystemGenerator : IIncrementalGenerator
             .Collect()
             .SelectMany(static (array, _) => array.Collect());
 
-        context.RegisterPostInitializationOutput(i =>
-        {
-            i.AddSource($"{WithAttribute.AttributeFullName}.g", WithAttribute.AttributeText);
-            i.AddSource($"{WithoutAttribute.AttributeFullName}.g", WithoutAttribute.AttributeText);
-            i.AddSource("Interfaces.g", SystemInterfaces.InterfacesText);
-        });
+        context.RegisterPostInitializationOutput(i => i.AddSource("Interfaces.g", SystemInterfaces.InterfacesText));
         
         context.RegisterSourceOutput(classes, GenerateCode);
     }
@@ -84,37 +79,54 @@ public sealed class SystemGenerator : IIncrementalGenerator
                         stashes.Add(new StashToGenerate(argumentSymbol, variable.Identifier.ToString()));
                     }
                 }
-            }
-            else if (fieldDeclaration.Declaration.Type.ToString() == "Filter")
-            {
-                var withTypes = new List<ISymbol>();
-                var withoutTypes = new List<ISymbol>();
-                foreach (var filterAttributes in fieldDeclaration.AttributeLists)
+                else if (genericNameSyntax.GetNameText() == "Filter")
                 {
-                    foreach (var filterAttribute in filterAttributes.Attributes)
+                    var arguments = genericNameSyntax.TypeArgumentList.Arguments;
+                    if (arguments.Count is < 1 or > 2)
                     {
-                        if (filterAttribute.Name.AttributeIsEqualByName(WithAttribute.AttributeName))
-                        {
-                            var symbols = ExtractTypeofType(ctx, filterAttribute);
-                            withTypes.AddRange(symbols);
-                        }
-                        else if (filterAttribute.Name.AttributeIsEqualByName(WithoutAttribute.AttributeName))
-                        {
-                            var symbols = ExtractTypeofType(ctx, filterAttribute);
-                            withoutTypes.AddRange(symbols);
-                        }
+                        continue;
                     }
-                }
-
-                foreach (var variable in fieldDeclaration.Declaration.Variables)
-                {
-                    filters.Add(new FilterToGenerate(
-                        variable.Identifier.ToString(), withTypes.ToArray(), withoutTypes.ToArray()));
+                    
+                    var withTypes = ExtractTypesFromTuple(ctx, arguments[0]).ToArray();
+                    var withoutTypes = arguments.Count == 2
+                        ? ExtractTypesFromTuple(ctx, arguments[1]).ToArray()
+                        : [];
+                    
+                    foreach (var variable in fieldDeclaration.Declaration.Variables)
+                    {
+                        filters.Add(new FilterToGenerate(variable.Identifier.ToString(), withTypes, withoutTypes));
+                    }
                 }
             }
         }
         
         return new SystemToGenerate(classDeclarationTypeSymbol, systemType, stashes.ToArray(), filters.ToArray());
+    }
+
+    private static IEnumerable<ISymbol> ExtractTypesFromTuple(GeneratorSyntaxContext ctx, SyntaxNode syntax)
+    {
+        var list = new List<ISymbol>();
+        if (syntax is TupleTypeSyntax tupleTypeSyntax)
+        {
+            foreach (var tupleElementSyntax in tupleTypeSyntax.Elements)
+            {
+                var elementSymbol = ctx.SemanticModel.GetSymbolInfo(tupleElementSyntax.Type).Symbol;
+                if (elementSymbol is not null)
+                {
+                    list.Add(elementSymbol);
+                }
+            }
+        }
+        else
+        {
+            var elementSymbol = ctx.SemanticModel.GetSymbolInfo(syntax).Symbol;
+            if (elementSymbol is not null)
+            {
+                list.Add(elementSymbol);
+            }
+        }
+
+        return list;
     }
 
     private static IEnumerable<ISymbol> ExtractTypeofType(GeneratorSyntaxContext ctx, AttributeSyntax filterAttribute)
