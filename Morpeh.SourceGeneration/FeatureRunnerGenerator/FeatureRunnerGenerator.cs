@@ -21,7 +21,11 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
             .Collect()
             .SelectMany(static (array, _) => array.Collect());
 
-        context.RegisterPostInitializationOutput(i => i.AddSource("FeatureInterface.g", FeatureRunnerInterface.InterfaceText));
+        context.RegisterPostInitializationOutput(i =>
+        {
+            i.AddSource("FeatureInterface.g", FeatureRunnerInterface.InterfaceText);
+            i.AddSource("WithWorldAttribute.g", WithWorldAttribute.AttributeText);
+        });
         
         context.RegisterSourceOutput(classes, GenerateCode);
     }
@@ -62,7 +66,9 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
             }
         }
         
-        return new FeatureRunnerToGenerate(classDeclarationTypeSymbol, systems.ToArray());
+        var withWorld = classDeclarationSyntax.HaveAttribute(WithWorldAttribute.AttributeName);
+        
+        return new FeatureRunnerToGenerate(classDeclarationTypeSymbol, systems.ToArray(), withWorld);
     }
 
     private static void GenerateCode(SourceProductionContext context, FeatureRunnerToGenerate featureRunnerToGenerate)
@@ -82,6 +88,8 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
             
             using (new CodeBuilder.BracketsBlock(builder))
             {
+                AppendWorld();
+                builder.AppendLine();
                 AppendConstructor();
                 builder.AppendLine();
                 AppendInject();
@@ -112,6 +120,16 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
             }
         }
         
+        void AppendWorld()
+        {
+            if (!featureRunnerToGenerate.WithWorld)
+            {
+                return;
+            }
+
+            builder.AppendLineWithIdent("private readonly Scellecs.Morpeh.World _world = Scellecs.Morpeh.World.Create();");
+        }
+        
         void AppendInject()
         {
             builder.AppendLineWithIdent("public void Inject(VContainer.IObjectResolver objectResolver)");
@@ -126,12 +144,17 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
         
         void AppendInitialize()
         {
-            builder.AppendLineWithIdent("public void Initialize(Scellecs.Morpeh.World world)");
+            builder.AppendLineWithIdent(featureRunnerToGenerate.WithWorld
+                ? "public void Initialize()"
+                : "public void Initialize(Scellecs.Morpeh.World world)");
+            
             using (new CodeBuilder.BracketsBlock(builder))
             {
                 foreach (var systemToGenerate in featureRunnerToGenerate.Systems)
                 {
-                    builder.AppendIdent().Append(systemToGenerate.Name).Append(".Initialize(world);").AppendLine();
+                    builder.AppendIdent().Append(systemToGenerate.Name)
+                        .Append(featureRunnerToGenerate.WithWorld ? ".Initialize(_world);" : ".Initialize(world);")
+                        .AppendLine();
                 }
             }
         }

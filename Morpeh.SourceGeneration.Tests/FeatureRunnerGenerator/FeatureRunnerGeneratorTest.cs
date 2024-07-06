@@ -21,6 +21,13 @@ public class FeatureRunnerGeneratorTest
                     private readonly Features.FirstFeature _firstFeature;
                     private readonly Features.SecondFeature _secondFeature;
                 }
+                
+                [WithWorld]
+                public class FeatureRunnerWithWorld : IFeatureRunner
+                {
+                    private readonly Features.FirstFeature _firstFeature;
+                    private readonly Features.SecondFeature _secondFeature;
+                }
             }
             """;
         
