@@ -47,6 +47,13 @@ public sealed class SystemGenerator : IIncrementalGenerator
             return OptionalExt.None<SystemToGenerate>();
         }
 
+        var (stashes, filters) = StashAndFiltersToGenerates(ctx, classDeclarationSyntax);
+        return new SystemToGenerate(classDeclarationTypeSymbol, systemType, stashes.ToArray(), filters.ToArray());
+    }
+
+    private static (List<StashToGenerate> stashes, List<FilterToGenerate> filters) StashAndFiltersToGenerates
+        (GeneratorSyntaxContext ctx, TypeDeclarationSyntax classDeclarationSyntax)
+    {
         var stashes = new List<StashToGenerate>();
         var filters = new List<FilterToGenerate>();
         foreach (var memberDeclaration in classDeclarationSyntax.Members)
@@ -59,48 +66,58 @@ public sealed class SystemGenerator : IIncrementalGenerator
             var fieldType = fieldDeclaration.Declaration.Type;
             if (fieldType is GenericNameSyntax genericNameSyntax)
             {
-                if (genericNameSyntax.GetNameText() == "Stash")
+                switch (genericNameSyntax.GetNameText())
                 {
-                    var arguments = genericNameSyntax.TypeArgumentList.Arguments;
-                    if (arguments.Count != 1)
-                    {
-                        continue;
-                    }
-                    
-                    var firstArgument = arguments[0];
-                    var argumentSymbol = ctx.SemanticModel.GetSymbolInfo(firstArgument).Symbol;
-                    if (argumentSymbol is null)
-                    {
-                        continue;
-                    }
-                    
-                    foreach (var variable in fieldDeclaration.Declaration.Variables)
-                    {
-                        stashes.Add(new StashToGenerate(argumentSymbol, variable.Identifier.ToString()));
-                    }
-                }
-                else if (genericNameSyntax.GetNameText() == "Filter")
-                {
-                    var arguments = genericNameSyntax.TypeArgumentList.Arguments;
-                    if (arguments.Count is < 1 or > 2)
-                    {
-                        continue;
-                    }
-                    
-                    var withTypes = ExtractTypesFromTuple(ctx, arguments[0]).ToArray();
-                    var withoutTypes = arguments.Count == 2
-                        ? ExtractTypesFromTuple(ctx, arguments[1]).ToArray()
-                        : [];
-                    
-                    foreach (var variable in fieldDeclaration.Declaration.Variables)
-                    {
-                        filters.Add(new FilterToGenerate(variable.Identifier.ToString(), withTypes, withoutTypes));
-                    }
+                    case "Stash": AddStashes(ctx, genericNameSyntax, fieldDeclaration, stashes); break;
+                    case "Filter": AddFilter(ctx, genericNameSyntax, fieldDeclaration, filters); break;
                 }
             }
         }
-        
-        return new SystemToGenerate(classDeclarationTypeSymbol, systemType, stashes.ToArray(), filters.ToArray());
+
+        return (stashes, filters);
+    }
+
+    private static void AddFilter(GeneratorSyntaxContext ctx, GenericNameSyntax genericNameSyntax,
+        FieldDeclarationSyntax fieldDeclaration, List<FilterToGenerate> filters)
+    {
+        var arguments = genericNameSyntax.TypeArgumentList.Arguments;
+        if (arguments.Count is < 1 or > 2)
+        {
+            return;
+        }
+                    
+        var withTypes = ExtractTypesFromTuple(ctx, arguments[0]).ToArray();
+        var withoutTypes = arguments.Count == 2
+            ? ExtractTypesFromTuple(ctx, arguments[1]).ToArray()
+            : [];
+                    
+        foreach (var variable in fieldDeclaration.Declaration.Variables)
+        {
+            filters.Add(
+                new FilterToGenerate(variable.Identifier.ToString(), withTypes, withoutTypes));
+        }
+    }
+
+    private static void AddStashes(GeneratorSyntaxContext ctx, GenericNameSyntax genericNameSyntax,
+        FieldDeclarationSyntax fieldDeclaration, List<StashToGenerate> stashes)
+    {
+        var arguments = genericNameSyntax.TypeArgumentList.Arguments;
+        if (arguments.Count != 1)
+        {
+            return;
+        }
+                    
+        var firstArgument = arguments[0];
+        var argumentSymbol = ctx.SemanticModel.GetSymbolInfo(firstArgument).Symbol;
+        if (argumentSymbol is null)
+        {
+            return;
+        }
+                    
+        foreach (var variable in fieldDeclaration.Declaration.Variables)
+        {
+            stashes.Add(new StashToGenerate(argumentSymbol, variable.Identifier.ToString()));
+        }
     }
 
     private static IEnumerable<ISymbol> ExtractTypesFromTuple(GeneratorSyntaxContext ctx, SyntaxNode syntax)
@@ -165,7 +182,7 @@ public sealed class SystemGenerator : IIncrementalGenerator
     private static void GenerateCode(SourceProductionContext context, SystemToGenerate systemToGenerate)
     {
         var code = GenerateCode(systemToGenerate);
-        context.AddSource($"{systemToGenerate.TypeSymbol.Name}.g", SourceText.From(code, Encoding.UTF8));
+        context.AddSource($"{systemToGenerate.TypeSymbol.ToDisplayString()}.g", SourceText.From(code, Encoding.UTF8));
     }
 
     private static string GenerateCode(SystemToGenerate systemToGenerate)
@@ -186,7 +203,6 @@ public sealed class SystemGenerator : IIncrementalGenerator
                 builder.AppendLine();
                 AppendInitialize();
                 builder.AppendLine();
-                
                 
                 if (systemToGenerate.SystemType.HasFlag(SystemType.Initialize))
                 {
@@ -213,7 +229,7 @@ public sealed class SystemGenerator : IIncrementalGenerator
         
         void AppendInitialize()
         {
-            builder.AppendLineWithIdent("public void Initialize(Scellecs.Morpeh.World world)");
+            builder.AppendLineWithIdent("public void Initialize(World world)");
             using (new CodeBuilder.BracketsBlock(builder))
             {
                 builder.AppendLineWithIdent("_world = world;");
@@ -232,7 +248,19 @@ public sealed class SystemGenerator : IIncrementalGenerator
 
                 foreach (var filter in systemToGenerate.Filters)
                 {
-                    builder.AppendIdent().Append(filter.Name).Append(" = _world.Filter");
+                    builder.AppendIdent().Append(filter.Name).Append(" = new Filter<");
+                    if (filter.With.Length > 1) builder.Append("(");
+                    builder.AppendArray(filter.With, (symbol, cb) => cb.Append(symbol.ToDisplayString()), cb => cb.Append(", "));
+                    if (filter.With.Length > 1) builder.Append(")");
+                    
+                    if (filter.Without.Length > 0) builder.Append(", ");
+                    if (filter.Without.Length > 1) builder.Append("(");
+                    builder.AppendArray(filter.Without, (symbol, cb) => cb.Append(symbol.ToDisplayString()), cb => cb.Append(", "));
+                    if (filter.Without.Length > 1) builder.Append(")");
+                    
+                    builder.Append(">(");
+                        
+                    builder.Append("_world.Filter");
                     foreach (var with in filter.With)
                     {
                         builder.Append(".With<").Append(with.ToDisplayString()).Append(">()");
@@ -242,8 +270,10 @@ public sealed class SystemGenerator : IIncrementalGenerator
                     {
                         builder.Append(".Without<").Append(without.ToDisplayString()).Append(">()");
                     }
-
-                    builder.Append(".Build();").AppendLine();
+                    
+                    builder.Append(".Build()");
+                        
+                    builder.Append(");").AppendLine();
                 }
             }
         }

@@ -1,11 +1,11 @@
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Text;
 using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Morpeh.SourceGeneration.Common;
+using Morpeh.SourceGeneration.FeatureGenerator;
 
 namespace Morpeh.SourceGeneration.FeatureRunnerGenerator;
 
@@ -24,6 +24,7 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
         context.RegisterPostInitializationOutput(i =>
         {
             i.AddSource("FeatureInterface.g", FeatureRunnerInterface.InterfaceText);
+            i.AddSource("FilterTypes.g", FilterTypes.FiltersText);
             i.AddSource("WithWorldAttribute.g", WithWorldAttribute.AttributeText);
         });
         
@@ -55,6 +56,17 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
         foreach (var memberDeclaration in classDeclarationSyntax.Members)
         {
             if (memberDeclaration is not FieldDeclarationSyntax fieldDeclaration)
+            {
+                continue;
+            }
+            
+            var typeSymbol = ctx.SemanticModel.GetTypeInfo(fieldDeclaration.Declaration.Type).Type;
+            if (typeSymbol is null)
+            {
+                continue;
+            }
+            
+            if (!typeSymbol.HaveInterface(FeatureInterface.FeatureInterfaceName))
             {
                 continue;
             }
@@ -131,12 +143,12 @@ public sealed class FeatureRunnerGenerator : IIncrementalGenerator
         
         void AppendInject()
         {
-            builder.AppendLineWithIdent("public void Inject(VContainer.IObjectResolver objectResolver)");
+            builder.AppendLineWithIdent("public void Inject(VContainer.IObjectResolver objectResolver, VContainer.IContainerBuilder builder)");
             using (new CodeBuilder.BracketsBlock(builder))
             {
                 foreach (var systemToGenerate in featureRunnerToGenerate.Systems)
                 {
-                    builder.AppendIdent().Append(systemToGenerate.Name).Append(".Inject(objectResolver);").AppendLine();
+                    builder.AppendIdent().Append(systemToGenerate.Name).Append(".Inject(objectResolver, builder);").AppendLine();
                 }
             }
         }

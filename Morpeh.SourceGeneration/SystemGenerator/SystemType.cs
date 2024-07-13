@@ -17,14 +17,15 @@ public static class SystemTypeExt
     public static SystemType ResolveSystemType(ITypeSymbol typeSymbol)
     {
         var type = SystemType.None;
-        if (typeSymbol.HaveInterface(SystemInterfaces.UpdateInterfaceName))
-        {
-            type |= SystemType.Update;
-        }
-     
+        
         if (typeSymbol.HaveInterface(SystemInterfaces.InitializeInterfaceName))
         {
             type |= SystemType.Initialize;
+        }
+        
+        if (typeSymbol.HaveInterface(SystemInterfaces.UpdateInterfaceName))
+        {
+            type |= SystemType.Update;
         }
 
         return type;

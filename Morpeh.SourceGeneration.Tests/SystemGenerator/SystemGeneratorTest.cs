@@ -46,22 +46,26 @@ public class SystemGeneratorTests
     {
         const string source =
             """
-            public struct Component1 {}
+            namespace TestFeature.Component
+            {
+                public struct Component1 {}
+            }
+            
             public struct Component2 {}
             public struct Component3 {}
-
+            
             namespace TestFeature.TestInitAndUpdateSystem
             {
                 public partial class TestInitAndUpdateSystem : IUpdateSystem, IInitializeSystem
                 {
                     [Inject] private ISomeService _someService;
                     
-                    private Stash<Component1> _stash1;
+                    private Stash<TestFeature.Component.Component1> _stash1;
                     private Stash<Component2> _stash2;
                     
-                    private Filter<(Component1, Component2), Component3> _filter1;
-                    private Filter<Component1> _filter2;
-                    private Filter<Component1, (Component2, Component3)> _filter3;
+                    private Filter<(TestFeature.Component.Component1, Component2), Component3> _filter1;
+                    private Filter<TestFeature.Component.Component1> _filter2;
+                    private Filter<TestFeature.Component.Component1, (Component2, Component3)> _filter3;
             
                     public void Update()
                     {

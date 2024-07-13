@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using Microsoft.CodeAnalysis;
@@ -21,7 +22,11 @@ public sealed class FeatureGenerator : IIncrementalGenerator
             .Collect()
             .SelectMany(static (array, _) => array.Collect());
 
-        context.RegisterPostInitializationOutput(i => i.AddSource("FeatureInterface.g", FeatureInterface.InterfaceText));
+        context.RegisterPostInitializationOutput(i =>
+        {
+            i.AddSource("FeatureInterface.g", FeatureInterface.InterfaceText);
+            i.AddSource("RegisterAttribute.g", RegisterAttribute.AttributeText);
+        });
         
         context.RegisterSourceOutput(classes, GenerateCode);
     }
@@ -65,10 +70,11 @@ public sealed class FeatureGenerator : IIncrementalGenerator
             {
                 continue;
             }
-            
+
+            var register = fieldDeclaration.HaveAttribute(RegisterAttribute.AttributeName);
             foreach (var variable in fieldDeclaration.Declaration.Variables)
             {
-                systems.Add(new SystemToGenerate(typeSymbol, systemType, variable.Identifier.ToString()));
+                systems.Add(new SystemToGenerate(typeSymbol, systemType, variable.Identifier.ToString(), register));
             }
         }
         
@@ -84,6 +90,7 @@ public sealed class FeatureGenerator : IIncrementalGenerator
     private static string GenerateCode(FeatureToGenerate featureToGenerate)
     {
         var builder = new CodeBuilder();
+        builder.AppendLineWithIdent("using VContainer;").AppendLine();
 
         using (new CodeBuilder.NamespaceBlock(builder, featureToGenerate.TypeSymbol))
         {
@@ -123,13 +130,25 @@ public sealed class FeatureGenerator : IIncrementalGenerator
         
         void AppendInject()
         {
-            builder.AppendLineWithIdent("public void Inject(VContainer.IObjectResolver objectResolver)");
+            builder.AppendLineWithIdent("public void Inject(VContainer.IObjectResolver objectResolver, VContainer.IContainerBuilder builder)");
             using (new CodeBuilder.BracketsBlock(builder))
             {
                 foreach (var systemToGenerate in featureToGenerate.Systems)
                 {
                     builder.AppendIdent().Append("objectResolver.Inject(").Append(systemToGenerate.Name)
                         .Append(");").AppendLine();
+                }
+
+                var systemsToRegister = featureToGenerate.Systems.Where(s => s.Register).ToList();
+                if (systemsToRegister.Any())
+                {
+                    builder.AppendLine();
+                    
+                    foreach (var systemToGenerate in systemsToRegister)
+                    {
+                        builder.AppendIdent().Append("builder.RegisterInstance(").Append(systemToGenerate.Name)
+                            .Append(");").AppendLine();
+                    }
                 }
             }
         }
