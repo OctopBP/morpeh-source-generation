@@ -1,4 +1,27 @@
-# How to use
+# Morpeh Source Generation
+
+This is source generation library for [Morpeh Framework](https://github.com/scellecs/morpeh).
+It can replace a lot of boilerplate code in your project.
+
+## Table of Contents
+* [How to install](#how-to-install)
+* [Feature Runner](#feature-runner)
+* [Features](#features)
+* * [Register attribute](#register-attribute)
+* [Systems](#systems)
+* * [Initialize System](#initialize-system)
+* * [Update System](#update-system)
+* [Stashes](#stashes)
+* * [Stash extensions](#stash-extensions)
+* [Filters](#filters)
+
+## How to install
+
+1. Inport `Morpeh.SourceGeneration.dll` to your unity project
+2. Disable all ckeckboxes in `Morpeh.SourceGeneration.dll` import settings panel. Press `Apply`
+3. Add `RoslynAnalyzer` tag to `Morpeh.SourceGeneration.dll`
+
+> If you using assembly definitions you have to plase `Morpeh.SourceGeneration.dll` into folder with `.asmdef` that have refference to `Morpeh`
 
 ## Feature Runner
 
@@ -31,7 +54,7 @@ public partial class SomeFeature : IFeature
 
 ## Systems
 
-### Start System
+### Initialize System
 
 ```csharp
 public partial class SomeSystem1 : IInitializeSystem
@@ -97,7 +120,7 @@ Stash<SomeComponent> _someStash;
 _someStash.Set(entity, value: 10);
 ```
 
-### Filters
+## Filters
 
 You can use generic filters. The first type or tuple defines with components, and an optional second type or tuple defines without components.
 
