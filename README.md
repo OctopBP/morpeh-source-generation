@@ -7,12 +7,12 @@ It can replace a lot of boilerplate code in your project.
 * [How to install](#how-to-install)
 * [Feature Runner](#feature-runner)
 * [Features](#features)
-* * [Register attribute](#register-attribute)
+    * [Register attribute](#register-attribute)
 * [Systems](#systems)
-* * [Initialize System](#initialize-system)
-* * [Update System](#update-system)
+    * [Initialize System](#initialize-system)
+    * [Update System](#update-system)
 * [Stashes](#stashes)
-* * [Stash extensions](#stash-extensions)
+    * [Stash extensions](#stash-extensions)
 * [Filters](#filters)
 
 ## How to install
